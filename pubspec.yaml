@@ -17,3 +17,40 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
+  # Add assets section to explicitly include fonts directory
+  assets:
+    - lib/fonts/
+    - lib/fonts/Xits/
+    - lib/fonts/LatinModern/
+    - lib/fonts/Libertinus/
+    - lib/fonts/Asana/
+    - lib/fonts/Fira/
+    - lib/fonts/Garamond/
+    - lib/fonts/Texgyretermes/
+    
+  fonts:
+    - family: Xits
+      fonts:
+        - asset: fonts/Xits/xits-regular.otf
+        - asset: fonts/Xits/xits-bold.otf
+          weight: 700
+        - asset: fonts/Xits/xits-italic.otf
+          style: italic
+        - asset: fonts/Xits/xits-bolditalic.otf
+          weight: 700
+          style: italic
+    - family: LatinModern
+      fonts:
+        - asset: lib/fonts/LatinModern/latinmodern-math.otf
+    - family: Libertinus
+      fonts:
+        - asset: lib/fonts/Asana/asana-math.otf
+    - family: Fira
+      fonts:
+        - asset: lib/fonts/Fira/firamath-regular.otf
+    - family: Garamond
+      fonts:
+        - asset: lib/fonts/Garamond/garamond-math.otf
+    - family: Texgyretermes
+      fonts:
+        - asset: lib/fonts/Texgyretermes/texgyretermes-math.otf

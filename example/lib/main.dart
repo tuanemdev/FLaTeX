@@ -22,13 +22,13 @@ class MyApp extends StatelessWidget {
               children: [
                 const LatexWidget(
                   latexCode: r'\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^N (x_i - \mu)^2}',
-                  scale: 1.5, // Increase scale for better visibility
+                  scale: 1.8, // Increase scale for better visibility
                 ),
                 const SizedBox(height: 32),
-                // Display another example for comparison
+                // Match the equation from the image
                 const LatexWidget(
-                  latexCode: r'\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}',
-                  scale: 1.5,
+                  latexCode: r'\sum_{n=1}^\infty \frac{1}{n^2} = \frac{\pi}{6}',
+                  scale: 1.8,
                 ),
               ],
             ),

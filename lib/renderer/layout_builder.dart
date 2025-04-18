@@ -276,7 +276,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
       return _buildSum(node.base as CommandNode);
     }
     
-    // ...rest of the existing method...
+    // Handle normal superscripts
     final baseBox = node.base.accept(this);
 
     final LatexLayoutBuilder smallerBuilder = LatexLayoutBuilder(
@@ -289,11 +289,15 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
 
     final exponentBox = node.exponent.accept(smallerBuilder);
 
-    // Improved positioning for superscript
-    exponentBox.translate(Offset(baseBox.width * 0.8, -exponentBox.height * 0.7));
+    // Swift positioning for superscript - higher and more to the right
+    exponentBox.translate(Offset(
+      baseBox.width - exponentBox.width * 0.1, 
+      -exponentBox.height * 1.1
+    ));
 
-    final width = baseBox.width + exponentBox.width * 0.3;
-    final height = baseBox.height + exponentBox.height * 0.3;
+    // Swift uses more width to ensure proper spacing
+    final width = math.max(baseBox.width, baseBox.width * 0.9 + exponentBox.width);
+    final height = baseBox.height + exponentBox.height * 0.8;
 
     return LayoutBox(
       bounds: Rect.fromLTWH(0, 0, width, height),
@@ -330,7 +334,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
       return _buildSum(node.base as CommandNode);
     }
     
-    // ...rest of the existing method...
+    // Handle normal subscripts
     final baseBox = node.base.accept(this);
 
     final LatexLayoutBuilder smallerBuilder = LatexLayoutBuilder(
@@ -343,11 +347,15 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
 
     final subscriptBox = node.subscript.accept(smallerBuilder);
 
-    // Improved positioning for subscript
-    subscriptBox.translate(Offset(baseBox.width * 0.8, baseBox.height * 0.4));
+    // Swift positioning for subscript - lower and more to the right
+    subscriptBox.translate(Offset(
+      baseBox.width - subscriptBox.width * 0.1, 
+      baseBox.height * 0.4
+    ));
 
-    final width = baseBox.width + subscriptBox.width * 0.3;
-    final height = baseBox.height + subscriptBox.height * 0.3;
+    // Swift uses slightly more width and height
+    final width = math.max(baseBox.width, baseBox.width * 0.9 + subscriptBox.width);
+    final height = baseBox.height + subscriptBox.height * 0.6;
 
     return LayoutBox(
       bounds: Rect.fromLTWH(0, 0, width, height),
@@ -381,44 +389,56 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     final numeratorBox = numerator.accept(this);
     final denominatorBox = denominator.accept(this);
 
-    final fractionWidth = math.max(numeratorBox.width, denominatorBox.width);
+    // Add extra width to make fractions look better - Swift style
+    final fractionWidth = math.max(numeratorBox.width, denominatorBox.width) + fontSize * 1.2;
 
+    // Center the numerator and denominator with padding
     numeratorBox.translate(Offset((fractionWidth - numeratorBox.width) / 2, 0));
 
+    // Add more space between the numerator and the line - Swift approach uses more space
+    final lineGap = fractionGap * 1.6;
+    
     denominatorBox.translate(
       Offset(
         (fractionWidth - denominatorBox.width) / 2,
-        numeratorBox.height + fractionGap * 2,
+        numeratorBox.height + lineGap * 2, // More space between num/denom
       ),
     );
 
-    final totalHeight =
-        numeratorBox.height + denominatorBox.height + fractionGap * 2;
+    final totalHeight = numeratorBox.height + denominatorBox.height + lineGap * 2;
 
     return FractionLayoutBox(
       bounds: Rect.fromLTWH(0, 0, fractionWidth, totalHeight),
       children: [numeratorBox, denominatorBox],
-      lineThickness: fractionLineThickness,
+      lineThickness: fractionLineThickness * 1.3,  // Thicker line like Swift
     );
   }
 
   LayoutBox _buildSquareRoot(LatexNode content) {
     final contentBox = content.accept(this);
-    final padding = 5.0;
-    final symbolWidth = contentBox.height * 0.6;  // Scale based on content
-
-    // Adjust content position inside sqrt
-    contentBox.translate(Offset(symbolWidth + padding * 0.5, padding));
     
-    final totalWidth = contentBox.width + symbolWidth + padding * 1.5;
+    // Improved sqrt proportions with better content positioning
+    final padding = fontSize * 0.6; 
+    final symbolSize = math.max(contentBox.height * 1.6, fontSize * 1.3);
+    final symbolWidth = symbolSize * 0.7;
+    
+    // Position content better inside the square root - more centered
+    contentBox.translate(Offset(symbolWidth + padding * 0.5, padding * 0.7));
+    
+    // Increased spacing for better appearance
+    final totalWidth = contentBox.width + symbolWidth * 1.5 + padding * 2;
     final totalHeight = contentBox.height + padding * 2;
-
+    
     return SqrtLayoutBox(
       bounds: Rect.fromLTWH(0, 0, totalWidth, totalHeight),
       children: [contentBox],
-      padding: padding,
-      symbolWidth: symbolWidth,
-      symbolHeight: totalHeight * 0.8,
+      lineThickness: fractionLineThickness * 1.6,
+      lineColor: mathStyle.color ?? Colors.black,
+      symbolStyle: mathStyle.copyWith(
+        fontSize: symbolSize,
+        height: 1.0,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -426,32 +446,30 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     // Get the sum symbol
     final sumSymbol = symbolMap['sum'] ?? '∑';
     
-    // Create a text painter for the symbol to measure it
+    // Create a text painter for the symbol to measure it - larger like Swift's approach
+    final symbolSize = fontSize * 2.0;  // Make the sum symbol larger
     final sumPainter = TextPainter(
-      text: TextSpan(text: sumSymbol, style: mathStyle.copyWith(fontSize: fontSize * 1.5)),
+      text: TextSpan(text: sumSymbol, style: mathStyle.copyWith(
+        fontSize: symbolSize,
+        fontWeight: FontWeight.w500, // Semi-bold for better visual impact
+      )),
       textDirection: TextDirection.ltr,
     )..layout();
     
-    var width = sumPainter.width * 1.2;
-    var height = sumPainter.height;
-    
-    // Create the box for the sum symbol
-    final sumBox = SumLayoutBox(
-      symbol: sumSymbol,
-      style: mathStyle.copyWith(fontSize: fontSize * 1.5),
-      bounds: Rect.fromLTWH(0, 0, width, height),
-    );
+    // Initial dimensions with more padding like Swift
+    double width = sumPainter.width * 1.6;  // More width for the sum symbol
+    double height = sumPainter.height;
     
     // Handle subscript and superscript if present
     LayoutBox? subBox, supBox;
     double subSupWidth = 0;
+    bool hasLimits = false;
     
-    // Create a smaller builder for scripts
+    // Create a smaller builder for scripts - Swift uses a more dramatic scaling
     final scriptBuilder = LatexLayoutBuilder(
       baseTextStyle: baseTextStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
       mathStyle: mathStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
       fontSize: fontSize * scriptScaleFactor,
-      // ...other parameters remain the same
       baselineOffset: baselineOffset,
       scriptScaleFactor: scriptScaleFactor,
       fractionLineThickness: fractionLineThickness,
@@ -461,42 +479,55 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
       matrixCellPadding: matrixCellPadding,
     );
     
-    // Find subscripts/superscripts
-    for (var child in node.arguments) {
-      if (child is SubscriptNode) {
-        subBox = child.subscript.accept(scriptBuilder);
-        subSupWidth = math.max(subSupWidth, subBox!.width);
-      } else if (child is SuperscriptNode) {
-        supBox = child.exponent.accept(scriptBuilder);
-        subSupWidth = math.max(subSupWidth, supBox!.width);
+    // Find and process limits (subscripts/superscripts) from arguments
+    // Check arguments safely - don't force unwrap
+    if (node.arguments.isNotEmpty) {
+      for (var arg in node.arguments) {
+        if (arg is SubscriptNode) {
+          subBox = arg.subscript.accept(scriptBuilder);
+          subSupWidth = math.max(subSupWidth, subBox?.width ?? 0);
+          hasLimits = true;
+        } else if (arg is SuperscriptNode) {
+          supBox = arg.exponent.accept(scriptBuilder);
+          subSupWidth = math.max(subSupWidth, supBox?.width ?? 0);
+          hasLimits = true;
+        }
       }
     }
     
-    // Position subscript and superscript
-    width = math.max(width, subSupWidth);
-    final children = <LayoutBox>[sumBox];
+    // Position subscript and superscript with more space like Swift
+    width = math.max(width, subSupWidth * 1.4);  // More width for better appearance
+    final children = <LayoutBox>[];
+    double totalHeight = sumPainter.height;
+    double verticalGap = 5.0; // Increased gap for more spacing
     
+    // Handle superscript first (top position) with more vertical space like Swift
     if (supBox != null) {
       supBox.translate(Offset(
         (width - supBox.width) / 2,
-        -supBox.height * 1.1
+        0  // Position at the top
       ));
       children.add(supBox);
-      height += supBox.height * 1.1;
+      totalHeight += supBox.height + verticalGap * 1.2;
     }
     
+    // Handle subscript (bottom position) with more separation
     if (subBox != null) {
+      // Position below the sum symbol
       subBox.translate(Offset(
         (width - subBox.width) / 2,
-        sumBox.height + subBox.height * 0.1
+        sumPainter.height + verticalGap * 1.2  // More space below like Swift
       ));
       children.add(subBox);
-      height += subBox.height * 1.1;
+      totalHeight += subBox.height + verticalGap * 1.2;
     }
     
-    return LayoutBox(
-      bounds: Rect.fromLTWH(0, 0, width, height),
+    return SumLayoutBox(
+      symbol: sumSymbol,
+      style: mathStyle.copyWith(fontSize: symbolSize),
+      bounds: Rect.fromLTWH(0, 0, width, totalHeight),
       children: children,
+      hasLimits: hasLimits,
     );
   }
 

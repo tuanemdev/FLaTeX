@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class LayoutBox {
   Rect bounds;
@@ -97,12 +98,18 @@ class FractionLayoutBox extends LayoutBox {
   
   @override
   void draw(Canvas canvas) {
-    // Draw the fraction line
+    // Draw the fraction line with rounded caps for a more polished look
     final lineY = offset.dy + bounds.height / 2;
+    final paint = Paint()
+      ..color = linePaint.color
+      ..strokeWidth = lineThickness
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    
     canvas.drawLine(
-      Offset(offset.dx, lineY),
-      Offset(offset.dx + bounds.width, lineY),
-      linePaint,
+      Offset(offset.dx + 2.0, lineY),
+      Offset(offset.dx + bounds.width - 2.0, lineY),
+      paint,
     );
     
     super.draw(canvas);
@@ -214,53 +221,77 @@ class MatrixLayoutBox extends LayoutBox {
 }
 
 class SqrtLayoutBox extends LayoutBox {
-  final double padding;
-  final double symbolWidth;
-  final double symbolHeight;
-
+  final double lineThickness;
+  final Color lineColor;
+  final String sqrtSymbol;
+  final TextStyle symbolStyle;
+  final TextPainter symbolPainter;
+  
   SqrtLayoutBox({
     required super.bounds,
-    required this.padding,
     List<LayoutBox> super.children = const [],
-    this.symbolWidth = 10.0,
-    this.symbolHeight = 5.0,
-  });
+    super.offset,
+    this.lineThickness = 1.5,
+    this.lineColor = Colors.black,
+    this.sqrtSymbol = '√',
+    TextStyle? symbolStyle,
+  }) : symbolStyle = (symbolStyle ?? TextStyle(fontSize: 20, color: lineColor)),
+       symbolPainter = TextPainter(
+         text: TextSpan(
+           text: '√',
+           style: (symbolStyle ?? TextStyle(fontSize: 20, color: lineColor)),
+         ),
+         textDirection: TextDirection.ltr,
+       )..layout();
 
   @override
   void draw(Canvas canvas) {
-    // Draw the square root symbol with better proportions
-    final path = Path();
-    final startX = offset.dx;
-    final startY = offset.dy + bounds.height * 0.75;
-    final sqrtHeight = bounds.height;
+    // Get content dimensions
+    final contentHeight = children.isNotEmpty ? children.first.height : bounds.height * 0.6;
+    final contentWidth = children.isNotEmpty ? children.first.width : bounds.width * 0.6;
     
-    // Start at the bottom
-    path.moveTo(startX, startY);
-    // Draw the diagonal upward
-    path.lineTo(startX + symbolWidth * 0.5, startY);
-    // Small diagonal down
-    path.lineTo(startX + symbolWidth * 0.8, startY - sqrtHeight * 0.1);
-    // Diagonal up to top
-    path.lineTo(startX + symbolWidth * 1.2, startY - sqrtHeight * 0.8);
-    // Horizontal line covering the content
-    path.lineTo(startX + bounds.width, startY - sqrtHeight * 0.8);
-
+    // Swift implementation uses taller radical sign
+    final symbolHeight = math.max(contentHeight * 1.7, 18.0);
+    final symbolWidth = symbolHeight * 0.7;
+    final symbolYOffset = contentHeight * 0.03;
+    
+    // Similar to Swift implementation - use thicker stroke
     final paint = Paint()
-      ..color = Colors.black
+      ..color = lineColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
+      ..strokeWidth = lineThickness * 1.5
+      ..strokeCap = StrokeCap.round;
+    
+    // More vertical radical path as seen in Swift implementation
+    final path = Path();
+    
+    // Starting point slightly more to the left like Swift
+    final startX = offset.dx;
+    final startY = offset.dy + contentHeight * 0.75; // Position closer to the Swift implementation
+    
+    // Swift implementation uses a more vertical path
+    path.moveTo(startX, startY);
+    path.lineTo(startX + symbolWidth * 0.3, startY);
+    path.lineTo(startX + symbolWidth * 0.5, offset.dy + contentHeight); 
+    path.lineTo(startX + symbolWidth * 0.7, offset.dy - contentHeight * 0.1);
+    
+    // Draw the horizontal line extending from the radical
+    final lineY = offset.dy + symbolYOffset;
+    final lineEndX = offset.dx + bounds.width;
+    
+    path.lineTo(lineEndX, lineY);
+    
     canvas.drawPath(path, paint);
-
-    // Draw the content of the square root
+    
+    // Draw the children
     super.draw(canvas);
   }
 }
 
-// Add a specialized layout box for sum symbols
 class SumLayoutBox extends LayoutBox {
   final TextStyle style;
   final TextPainter sumPainter;
+  final bool hasLimits;
   
   SumLayoutBox({
     required String symbol,
@@ -268,6 +299,7 @@ class SumLayoutBox extends LayoutBox {
     required super.bounds,
     super.offset,
     super.children,
+    this.hasLimits = false,
   }) : sumPainter = TextPainter(
           text: TextSpan(text: symbol, style: style),
           textDirection: TextDirection.ltr,
@@ -275,11 +307,54 @@ class SumLayoutBox extends LayoutBox {
   
   @override
   void draw(Canvas canvas) {
-    // Draw the sum symbol centered
-    sumPainter.paint(canvas, Offset(
-      offset.dx + (bounds.width - sumPainter.width) / 2,
-      offset.dy
-    ));
+    // Position the sum symbol centered horizontally with refined vertical position
+    final symbolX = offset.dx + (bounds.width - sumPainter.width) / 2;
+    double symbolY = offset.dy;
+    
+    // Adjust the position based on limits
+    if (hasLimits && children.length >= 2) {
+      // With both limits
+      final topScript = children[0];
+      symbolY += topScript.height + 4.0;
+    } else if (hasLimits && children.isNotEmpty) {
+      // With just one limit
+      symbolY += 8.0;
+    }
+    
+    // Draw the sum symbol - use custom drawing for better quality
+    if (style.fontFamily != null) {
+      // Use the font if specified
+      sumPainter.paint(canvas, Offset(symbolX, symbolY));
+    } else {
+      // Draw a custom sum symbol for better quality
+      final height = bounds.height * 0.6;
+      final width = height * 0.8;
+      final x = symbolX + (sumPainter.width - width) / 2;
+      final y = symbolY + (sumPainter.height - height) / 2;
+      
+      final sumPath = Path();
+      
+      // Top horizontal line
+      sumPath.moveTo(x, y);
+      sumPath.lineTo(x + width, y);
+      
+      // Diagonal line
+      sumPath.moveTo(x + width * 0.9, y + height * 0.1);
+      sumPath.lineTo(x + width * 0.1, y + height * 0.9);
+      
+      // Bottom horizontal line
+      sumPath.moveTo(x, y + height);
+      sumPath.lineTo(x + width, y + height);
+      
+      canvas.drawPath(
+        sumPath, 
+        Paint()
+          ..color = style.color ?? Colors.black
+          ..strokeWidth = style.fontSize! / 10.0
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+      );
+    }
     
     // Draw children (subscripts, superscripts)
     super.draw(canvas);
