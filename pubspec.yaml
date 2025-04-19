@@ -17,40 +17,38 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
-  # Add assets section to explicitly include fonts directory
+  # Add assets section to include the fonts directory
   assets:
-    - lib/fonts/
-    - lib/fonts/Xits/
-    - lib/fonts/LatinModern/
-    - lib/fonts/Libertinus/
-    - lib/fonts/Asana/
-    - lib/fonts/Fira/
-    - lib/fonts/Garamond/
-    - lib/fonts/Texgyretermes/
-    
+    - fonts/
+  
   fonts:
     - family: Xits
       fonts:
-        - asset: fonts/Xits/xits-regular.otf
-        - asset: fonts/Xits/xits-bold.otf
-          weight: 700
-        - asset: fonts/Xits/xits-italic.otf
-          style: italic
-        - asset: fonts/Xits/xits-bolditalic.otf
-          weight: 700
-          style: italic
+        - asset: fonts/Xits/xits-math.otf
     - family: LatinModern
       fonts:
-        - asset: lib/fonts/LatinModern/latinmodern-math.otf
+        - asset: fonts/LatinModern/latinmodern-math.otf
     - family: Libertinus
       fonts:
-        - asset: lib/fonts/Asana/asana-math.otf
+        - asset: fonts/Libertinus/LibertinusMath-Regular.otf
     - family: Fira
       fonts:
-        - asset: lib/fonts/Fira/firamath-regular.otf
+        - asset: fonts/Fira/FiraMath-Regular.otf
     - family: Garamond
       fonts:
-        - asset: lib/fonts/Garamond/garamond-math.otf
+        - asset: fonts/Garamond/garamond-math.otf
     - family: Texgyretermes
       fonts:
-        - asset: lib/fonts/Texgyretermes/texgyretermes-math.otf
+        - asset: fonts/Texgyretermes/texgyretermes-math.otf
+    - family: Euler
+      fonts:
+        - asset: fonts/Euler/Euler-Math.otf
+    - family: Lete
+      fonts:
+        - asset: fonts/Lete/LeteSansMath.otf
+    - family: Kp
+      fonts:
+        - asset: fonts/Kp/KpMath-Light.otf
+        - asset: fonts/Kp/KpMath-Sans.otf
+          style: normal
+          weight: 400

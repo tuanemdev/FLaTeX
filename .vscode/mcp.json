@@ -1,0 +1,9 @@
+{
+    "servers": {
+        "my-mcp-server-544728ca": {
+            "type": "stdio",
+            "command": "docker",
+            "args": []
+        }
+    }
+}
