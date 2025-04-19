@@ -14,7 +14,8 @@ enum TokenType {
   beginOptions,
   endOptions,
   separator,
-  whitespace,  // New token type for whitespace
+  whitespace,
+  mathOperator,
   eof,
   error,
 }

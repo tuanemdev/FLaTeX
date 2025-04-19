@@ -31,7 +31,7 @@ final class LaTeXLexer {
 
     final char = peek();
 
-    // Handle whitespace separately to make it a distinct token
+    // Handle whitespace separately to consolidate consecutive whitespace characters
     if (isWhitespace(char)) {
       return scanWhitespace();
     }
@@ -134,6 +134,19 @@ final class LaTeXLexer {
           value: ',',
           position: position - 1,
         );
+      // Add case for math operators in math mode
+      case '=':
+      case '+':
+      case '-':
+      case '<':
+      case '>':
+      case '~':
+        advance();
+        return Token(
+          type: TokenType.mathOperator,
+          value: char,
+          position: position - 1,
+        );
       default:
         return scanText();
     }
@@ -196,7 +209,7 @@ final class LaTeXLexer {
     final startPos = position;
     final buffer = StringBuffer();
 
-    while (!isEOF && !isSpecialChar(peek()) && !isWhitespace(peek())) {
+    while (!isEOF && !isSpecialChar(peek())) {
       buffer.write(peek());
       advance();
     }
@@ -208,19 +221,22 @@ final class LaTeXLexer {
     );
   }
 
-  // New method to handle whitespace tokens
   Token scanWhitespace() {
     final startPos = position;
     final buffer = StringBuffer();
-
+    
+    // Consume all consecutive whitespace but only add a single space to the buffer
+    // This effectively collapses multiple spaces into one
     while (!isEOF && isWhitespace(peek())) {
-      buffer.write(peek());
       advance();
+      if (buffer.isEmpty) {
+        buffer.write(' '); // Replace any whitespace with a single space character
+      }
     }
 
     return Token(
       type: TokenType.whitespace,
-      value: buffer.toString(),
+      value: buffer.toString(), // Will be a single space regardless of original whitespace
       position: startPos,
     );
   }
@@ -235,10 +251,14 @@ final class LaTeXLexer {
   }
 
   bool isSpecialChar(String char) {
-    return r'{},\\$^_[]'.contains(char) || isWhitespace(char);
+    return r'{},\\$^_[]'.contains(char) || isWhitespace(char) || isMathOperator(char);
   }
 
-  // New helper method to check for whitespace
+  // New method to check if character is a math operator
+  bool isMathOperator(String char) {
+    return '=+-<>~*/:!'.contains(char);
+  }
+
   bool isWhitespace(String char) {
     return char == ' ' || char == '\t' || char == '\n' || char == '\r';
   }

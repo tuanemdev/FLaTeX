@@ -5,6 +5,7 @@ import 'package:flatex/util/font_loader.dart';
 // Export all public components
 export 'package:flatex/widgets/latex_widget.dart';
 export 'package:flatex/model/node.dart';
+export 'package:flatex/util/math_constants.dart';
 
 // Initialize math fonts when library is imported
 class FLaTeX {

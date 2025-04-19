@@ -12,6 +12,7 @@ import 'package:flatex/model/nodes/superscript_node.dart';
 import 'package:flatex/model/nodes/symbol_node.dart';
 import 'package:flatex/model/nodes/text_node.dart';
 import 'package:flatex/renderer/layout/layout.dart';
+import 'package:flatex/util/math_constants.dart';
 import 'package:flutter/material.dart';
 
 class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
@@ -42,6 +43,23 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
 
   @override
   LayoutBox visitTextNode(TextNode node) {
+    // Check if this is a mathematical operator (=, +, -, etc.)
+    if (_isMathOperator(node.text.trim())) {
+      // Use special spacing for math operators
+      final spacedText = ' ${node.text.trim()} '; // Ensure proper spacing
+      final textPainter = TextPainter(
+        text: TextSpan(text: spacedText, style: mathStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      return TextLayoutBox(
+        text: spacedText,
+        style: mathStyle,
+        bounds: Rect.fromLTWH(0, 0, textPainter.width, textPainter.height),
+      );
+    } 
+    
+    // Regular text handling
     final textPainter = TextPainter(
       text: TextSpan(text: node.text, style: baseTextStyle),
       textDirection: TextDirection.ltr,
@@ -52,6 +70,13 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       style: baseTextStyle,
       bounds: Rect.fromLTWH(0, 0, textPainter.width, textPainter.height),
     );
+  }
+
+  // Helper method to check if text is a math operator
+  bool _isMathOperator(String text) {
+    return text == "=" || text == "+" || text == "-" || text == "<" || 
+           text == ">" || text == "≤" || text == "≥" || text == "≠" || 
+           text == "≈" || text == "~";
   }
 
   @override
@@ -400,54 +425,80 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
     final numeratorBox = numerator.accept(this);
     final denominatorBox = denominator.accept(this);
 
-    // Add extra width to make fractions look better - Swift style
-    final fractionWidth = math.max(numeratorBox.width, denominatorBox.width) + fontSize * 1.2;
-
-    // Center the numerator and denominator with padding
-    numeratorBox.translate(Offset((fractionWidth - numeratorBox.width) / 2, 0));
-
-    // Add more space between the numerator and the line - Swift approach uses more space
-    final lineGap = fractionGap * 1.6;
+    // Determine if we're in display mode based on fontSize
+    final isDisplayStyle = fontSize >= 14.0;
     
+    // Calculate constants according to the OpenType MATH specification
+    final ruleThickness = MathConstants.fractionRuleThickness(fontSize);
+    
+    // Calculate gaps based on display style
+    final numGap = isDisplayStyle ? 
+        MathConstants.fractionNumeratorDisplayStyleGapMin(fontSize) : 
+        MathConstants.fractionNumeratorGapMin(fontSize);
+    final denomGap = isDisplayStyle ?
+        MathConstants.fractionDenominatorDisplayStyleGapMin(fontSize) :
+        MathConstants.fractionDenominatorGapMin(fontSize);
+    
+    // Ensure minimum width for the fraction
+    final fractionWidth = math.max(numeratorBox.width, denominatorBox.width) * 1.05;
+
+    // Position numerator - center horizontally
+    numeratorBox.translate(Offset((fractionWidth - numeratorBox.width) / 2, 0));
+    
+    // Calculate vertical position for denominator
+    // There should be: numerator + numGap + ruleThickness + denomGap + denominator
+    final totalGap = numGap + ruleThickness + denomGap;
+    final denomYOffset = numeratorBox.height + totalGap;
+    
+    // Position denominator - center horizontally and place below with proper gap
     denominatorBox.translate(
-      Offset(
-        (fractionWidth - denominatorBox.width) / 2,
-        numeratorBox.height + lineGap * 2, // More space between num/denom
-      ),
+      Offset((fractionWidth - denominatorBox.width) / 2, denomYOffset)
     );
 
-    final totalHeight = numeratorBox.height + denominatorBox.height + lineGap * 2;
+    // Calculate total fraction height
+    final totalHeight = numeratorBox.height + totalGap + denominatorBox.height;
 
     return FractionLayoutBox(
       bounds: Rect.fromLTWH(0, 0, fractionWidth, totalHeight),
       children: [numeratorBox, denominatorBox],
-      lineThickness: fractionLineThickness * 1.3,  // Thicker line like Swift
+      lineThickness: ruleThickness,
+      isDisplayStyle: isDisplayStyle,
     );
   }
 
   LayoutBox _buildSquareRoot(LaTeXNode content) {
     final contentBox = content.accept(this);
     
-    // Use more conservative padding and proportions
-    final padding = fontSize * 0.4; 
-    final symbolWidth = contentBox.height * 0.6;
+    // Determine if we're in display mode
+    final isDisplayStyle = fontSize >= 14.0;
     
-    // Position content with a more reasonable offset
-    contentBox.translate(Offset(symbolWidth + padding * 0.8, padding * 0.5));
+    // Calculate proper layout parameters for the square root
+    final ruleThickness = MathConstants.radicalRuleThickness(fontSize);
+    final verticalGap = isDisplayStyle ? 
+        MathConstants.radicalDisplayStyleVerticalGap(fontSize) : 
+        MathConstants.radicalVerticalGap(fontSize);
     
-    // Adjusted spacing for better appearance
-    final totalWidth = contentBox.width + symbolWidth + padding * 2;
-    final totalHeight = contentBox.height + padding;
+    // Calculate the width needed for the radical symbol
+    // Using a proportion of the content height
+    final contentHeight = contentBox.height;
+    final radicalWidth = contentHeight * 0.4;
+    
+    // Position content to allow space for the radical
+    // Add a horizontal gap to ensure the content doesn't touch the radical
+    final horizontalGap = fontSize * 0.1;
+    contentBox.translate(Offset(radicalWidth + horizontalGap, 0));
+    
+    // Calculate the total bounds of the sqrt layout
+    final totalWidth = contentBox.width + radicalWidth + horizontalGap;
+    final totalHeight = math.max(contentBox.height, contentHeight + verticalGap * 2);
     
     return SqrtLayoutBox(
       bounds: Rect.fromLTWH(0, 0, totalWidth, totalHeight),
       children: [contentBox],
-      lineThickness: fractionLineThickness,
+      lineThickness: ruleThickness,
       lineColor: mathStyle.color ?? Colors.black,
-      symbolStyle: mathStyle.copyWith(
-        fontSize: contentBox.height * 1.2,
-        height: 1.0,
-      ),
+      symbolStyle: mathStyle,
+      isDisplayStyle: isDisplayStyle,
     );
   }
 
@@ -456,7 +507,9 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
     final sumSymbol = symbolMap['sum'] ?? '∑';
     
     // Create a text painter for the symbol to measure it
-    final symbolSize = fontSize * 2.0;
+    final isDisplayStyle = fontSize >= 16.0;
+    final symbolSize = isDisplayStyle ? fontSize * 2.0 : fontSize * 1.7;
+    
     final sumPainter = TextPainter(
       text: TextSpan(text: sumSymbol, style: mathStyle.copyWith(
         fontSize: symbolSize,
@@ -465,18 +518,18 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       textDirection: TextDirection.ltr,
     )..layout();
     
-    double width = sumPainter.width * 1.6;
+    // Calculate proper width with standard proportions
+    double width = sumPainter.width * 1.3;
     
     // Handle subscript and superscript if present
     LayoutBox? subBox, supBox;
     double subSupWidth = 0;
     bool hasLimits = false;
-    bool isLimitStyle = true; // Default to limit style for display mode
     
     final scriptBuilder = LatexLayoutBuilder(
-      baseTextStyle: baseTextStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
-      mathStyle: mathStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
-      fontSize: fontSize * scriptScaleFactor,
+      baseTextStyle: baseTextStyle.copyWith(fontSize: fontSize * MathConstants.scriptScaleFactor),
+      mathStyle: mathStyle.copyWith(fontSize: fontSize * MathConstants.scriptScaleFactor),
+      fontSize: fontSize * MathConstants.scriptScaleFactor,
       baselineOffset: baselineOffset,
       scriptScaleFactor: scriptScaleFactor,
       fractionLineThickness: fractionLineThickness,
@@ -486,10 +539,10 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       matrixCellPadding: matrixCellPadding,
     );
     
-    // Only process direct subscripts and superscripts as limits
+    // Process limits
     if (node.arguments.isNotEmpty) {
       for (var arg in node.arguments) {
-        // Check if this is a direct subscript/superscript for the sum operator
+        // Handle subscripts/superscripts for large operators
         if (arg is SubscriptNode && 
             (arg.base is TextNode && (arg.base as TextNode).text.isEmpty)) {
           subBox = arg.subscript.accept(scriptBuilder);
@@ -508,28 +561,65 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       }
     }
     
-    width = math.max(width, subSupWidth * 1.4);
+    // Ensure proper width for the whole expression
+    width = math.max(width, subSupWidth * 1.2);
     final children = <LayoutBox>[];
     double totalHeight = sumPainter.height;
-    double verticalGap = 5.0;
     
-    // Position superscript and subscript properly
-    if (supBox != null) {
-      supBox.translate(Offset(
-        (width - supBox.width) / 2,
-        0
-      ));
-      children.add(supBox);
-      totalHeight += supBox.height + verticalGap * 1.2;
-    }
+    // Calculate standard gaps
+    final upperLimitGap = MathConstants.upperLimitGapMin(fontSize);
+    final lowerLimitGap = MathConstants.lowerLimitGapMin(fontSize);
     
-    if (subBox != null) {
-      subBox.translate(Offset(
-        (width - subBox.width) / 2,
-        sumPainter.height + verticalGap * 1.2
-      ));
-      children.add(subBox);
-      totalHeight += subBox.height + verticalGap * 1.2;
+    // Position limits according to OpenType MATH specifications
+    if (isDisplayStyle) {
+      // Display style - limits above and below
+      if (supBox != null) {
+        // Position superscript at the top with proper gap
+        supBox.translate(Offset((width - supBox.width) / 2, 0));
+        children.add(supBox);
+        totalHeight = supBox.height + upperLimitGap;
+      }
+      
+      // Add height for the symbol itself
+      totalHeight += sumPainter.height;
+      
+      if (subBox != null) {
+        // Position subscript below with proper gap
+        subBox.translate(Offset(
+          (width - subBox.width) / 2,
+          totalHeight + lowerLimitGap
+        ));
+        children.add(subBox);
+        totalHeight += subBox.height + lowerLimitGap;
+      }
+    } else {
+      // Inline style - limits as subscripts/superscripts
+      // Just use standard sum height
+      totalHeight = sumPainter.height;
+      
+      // Position limits to the right with proper offsets
+      if (supBox != null) {
+        // Position as proper superscript
+        supBox.translate(Offset(
+          width * 0.7,
+          MathConstants.superscriptShiftUp(fontSize)
+        ));
+        children.add(supBox);
+      }
+      
+      if (subBox != null) {
+        // Position as proper subscript
+        subBox.translate(Offset(
+          width * 0.7,
+          sumPainter.height - MathConstants.subscriptShiftDown(fontSize)
+        ));
+        children.add(subBox);
+      }
+      
+      // Adjust width if needed for side scripts
+      if (supBox != null || subBox != null) {
+        width += subSupWidth * 0.8;
+      }
     }
     
     return SumLayoutBox(
@@ -538,7 +628,7 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       bounds: Rect.fromLTWH(0, 0, width, totalHeight),
       children: children,
       hasLimits: hasLimits,
-      isLimitStyle: isLimitStyle,
+      isDisplayStyle: isDisplayStyle,
     );
   }
 

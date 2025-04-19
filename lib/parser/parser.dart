@@ -64,9 +64,11 @@ final class LaTeXParser {
   }
 
   LaTeXNode parseExpression() {
-    // Skip any whitespace before starting a new expression
-    while (currentToken.type == TokenType.whitespace) {
-      advance();
+    // Skip whitespace before expressions unless in a specific context where we want to preserve it
+    if (!_isInWhitespaceSensitiveContext()) {
+      while (currentToken.type == TokenType.whitespace) {
+        advance();
+      }
     }
 
     LaTeXNode node;
@@ -99,12 +101,32 @@ final class LaTeXParser {
         // Direct subscript handling (like _i without a base)
         node = parseSubscript();
         break;
+      case TokenType.mathOperator:
+        // Handle math operators with proper spacing
+        final opValue = currentToken.value;
+        advance();
+        
+        // Create a text node for the operator with explicit spacing
+        node = TextNode(
+          text: ' $opValue ',  // Add space before and after the operator
+          startPosition: initialPosition,
+          endPosition: initialPosition + opValue.length,
+        );
+        break;
       case TokenType.eof:
         return ErrorNode(
           message: 'Unexpected end of file',
           startPosition: initialPosition,
           endPosition: initialPosition + 1,
         );
+      case TokenType.whitespace:
+        // Create a text node for whitespace when in a whitespace-sensitive context
+        if (_isInWhitespaceSensitiveContext()) {
+          return parseText(); // Treat whitespace as text in these contexts
+        } else {
+          advance(); // Skip whitespace in non-sensitive contexts
+          return parseExpression(); // Continue to next expression
+        }
       default:
         final errorPos = currentToken.position;
         final errorToken = currentToken;
@@ -123,10 +145,13 @@ final class LaTeXParser {
         currentToken.type == TokenType.subscript) {
       if (currentToken.type == TokenType.superscript) {
         advance();
-        // Skip any whitespace after the superscript symbol
+        
+        // Skip whitespace after superscript symbol but before the argument
+        // This fixes the rendering issue with expressions like \sum^N (x_i)
         while (currentToken.type == TokenType.whitespace) {
           advance();
         }
+        
         final exponent =
             currentToken.type == TokenType.beginGroup
                 ? parseGroup()
@@ -139,10 +164,13 @@ final class LaTeXParser {
         );
       } else if (currentToken.type == TokenType.subscript) {
         advance();
-        // Skip any whitespace after the subscript symbol
+        
+        // Skip whitespace after subscript symbol but before the argument
+        // This fixes the rendering issue with expressions like \sum_i (x_i)
         while (currentToken.type == TokenType.whitespace) {
           advance();
         }
+        
         final subscript =
             currentToken.type == TokenType.beginGroup
                 ? parseGroup()
@@ -156,12 +184,45 @@ final class LaTeXParser {
       }
     }
 
-    // Skip any whitespace after the expression
-    while (currentToken.type == TokenType.whitespace) {
-      advance();
+    // Only skip trailing whitespace for nodes that don't need it preserved
+    if (!_shouldPreserveTrailingWhitespace(node)) {
+      while (currentToken.type == TokenType.whitespace) {
+        advance();
+      }
     }
 
     return node;
+  }
+
+  // New helper method to determine if we're in a context where whitespace is significant
+  bool _isInWhitespaceSensitiveContext() {
+    // In text mode or within certain environments, whitespace may be significant
+    // This could be expanded based on the contextual state of the parser
+    return false; // Default to not sensitive for now
+  }
+
+  // New helper method to check if a node should preserve trailing whitespace
+  bool _shouldPreserveTrailingWhitespace(LaTeXNode node) {
+    // For most math operations, whitespace is not significant
+    // But for text nodes or specific command nodes it might be
+    if (node is TextNode) {
+      return true;
+    }
+    
+    // Special handling for command nodes - some commands are sensitive to 
+    // whitespace that follows them (e.g., \sum should not have whitespace after it
+    // when followed by subscripts)
+    if (node is CommandNode) {
+      // List of commands that should not have whitespace after them
+      // when followed by subscripts or superscripts
+      final sensitiveCommands = [
+        '\\sum', '\\prod', '\\int', '\\lim', '\\max', '\\min', 
+        '\\sup', '\\inf', '\\limsup', '\\liminf'
+      ];
+      return !sensitiveCommands.contains(node.name);
+    }
+    
+    return false;
   }
 
   TextNode parseText() {
@@ -179,9 +240,16 @@ final class LaTeXParser {
     final commandName = currentToken.value;
     advance();
 
-    // Skip whitespace after the command name
-    while (currentToken.type == TokenType.whitespace) {
-      advance();
+    // For commands like \sum that can take subscripts directly, 
+    // we should not skip whitespace here
+    final isLargeOperator = _isLargeOperator(commandName);
+    
+    // Skip whitespace after command name only if it's not a large operator
+    // that might be followed by subscripts/superscripts
+    if (!isLargeOperator) {
+      while (currentToken.type == TokenType.whitespace) {
+        advance();
+      }
     }
 
     final options = <String>[];
@@ -223,6 +291,15 @@ final class LaTeXParser {
       startPosition: startPos,
       endPosition: lexer.position,
     );
+  }
+
+  // Helper method to determine if a command is a large operator
+  bool _isLargeOperator(String commandName) {
+    final largeOperators = [
+      '\\sum', '\\prod', '\\int', '\\oint', '\\lim', 
+      '\\max', '\\min', '\\sup', '\\inf'
+    ];
+    return largeOperators.contains(commandName);
   }
 
   GroupNode parseGroup() {

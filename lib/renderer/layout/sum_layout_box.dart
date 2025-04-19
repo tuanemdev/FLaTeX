@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flatex/renderer/layout/layout_box.dart';
 import 'package:flatex/util/font_loader.dart';
+import 'package:flatex/util/math_constants.dart';
 
 class SumLayoutBox extends LayoutBox {
   final TextStyle style;
   final TextPainter sumPainter;
   final bool hasLimits;
-  final bool isLimitStyle; // New property to control limit positioning style
+  final bool isDisplayStyle; 
 
   SumLayoutBox({
     required String symbol,
@@ -15,7 +16,7 @@ class SumLayoutBox extends LayoutBox {
     super.offset,
     super.children,
     this.hasLimits = false,
-    this.isLimitStyle = true, // By default, display limits below and above
+    this.isDisplayStyle = true,
   }) : sumPainter = TextPainter(
          text: TextSpan(
            text: symbol, 
@@ -28,23 +29,26 @@ class SumLayoutBox extends LayoutBox {
 
   @override
   void draw(Canvas canvas) {
-    // Position the sum symbol centered horizontally with refined vertical position
+    // First establish the vertical layout of all components
+    final fontSize = style.fontSize ?? 16.0;
+    
+    // Position the sum symbol centered horizontally
     final symbolX = offset.dx + (bounds.width - sumPainter.width) / 2;
     double symbolY = offset.dy;
 
-    // Only adjust the vertical position if we're using limit style (display mode)
-    if (isLimitStyle && hasLimits) {
-      if (children.length >= 2) {
-        // With both limits
-        final topScript = children[0];
-        symbolY += topScript.height + 4.0;
-      } else if (children.isNotEmpty) {
-        // With just one limit
-        symbolY += 8.0;
+    // For display style with limits, we need to position them differently
+    if (isDisplayStyle && hasLimits) {
+      if (children.length > 0) {
+        // Find superscript (if any) and add its height plus gap
+        var upperLimit = children.length >= 1 ? children[0] : null;
+        if (upperLimit != null) {
+          symbolY = offset.dy + upperLimit.height + 
+            MathConstants.upperLimitGapMin(fontSize);
+        }
       }
     }
 
-    // Always use the font since we're now ensuring Latin Modern is available
+    // Draw the sum symbol at the calculated position
     sumPainter.paint(canvas, Offset(symbolX, symbolY));
 
     // Draw children (subscripts, superscripts)

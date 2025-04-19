@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flatex/renderer/layout/layout_box.dart';
+import 'package:flatex/util/math_constants.dart';
 
 class SqrtLayoutBox extends LayoutBox {
   final double lineThickness;
   final Color lineColor;
   final TextStyle symbolStyle;
+  final bool isDisplayStyle;
 
   SqrtLayoutBox({
     required super.bounds,
@@ -13,31 +15,52 @@ class SqrtLayoutBox extends LayoutBox {
     required this.lineThickness,
     required this.lineColor,
     required this.symbolStyle,
+    this.isDisplayStyle = false,
   });
 
   @override
   void draw(Canvas canvas) {
-    // Draw the radical symbol
+    if (children.isEmpty) {
+      super.draw(canvas);
+      return;
+    }
+    
+    final contentBox = children[0];
+    
+    // Draw the radical symbol with correct proportions
     final paint = Paint()
       ..color = lineColor
       ..strokeWidth = lineThickness
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-    // Calculate positions for the square root symbol parts
-    final double height = bounds.height;
-    final double contentWidth = children.isNotEmpty ? children[0].width : 0;
-    final double symbolWidth = height * 0.5; // Width proportional to height
-
-    // Starting point at the bottom-left of the symbol
-    final startX = offset.dx + symbolWidth * 0.1;
-    final baseY = offset.dy + height - lineThickness;
+    // Calculate positions with correct proportions
+    final double contentHeight = contentBox.height;
+    final double contentWidth = contentBox.width;
     
-    // Path for the radical symbol
+    // Radical symbol dimensions based on content
+    final double radicalWidth = contentHeight * 0.4;
+    final double hookDepth = contentHeight * 0.1;
+    
+    // Positioning coordinates for the radical
+    final double startX = offset.dx;
+    final double topY = offset.dy;
+    final double baselineY = topY + contentHeight;
+    
+    // Path for the radical symbol following proper typography
     final path = Path();
-    path.moveTo(startX, baseY - height * 0.4); // Start at middle left
-    path.lineTo(startX + symbolWidth * 0.3, baseY); // Down to bottom
-    path.lineTo(startX + symbolWidth * 0.6, offset.dy + lineThickness); // Up to top-right of symbol
-    path.lineTo(offset.dx + symbolWidth + contentWidth, offset.dy + lineThickness); // Horizontal line
+    
+    // Start at bottom left of hook
+    path.moveTo(startX, baselineY - hookDepth);
+    
+    // Draw the hook (bottom part of the radical)
+    path.lineTo(startX + radicalWidth * 0.4, baselineY);
+    
+    // Draw the upstroke of the radical
+    path.lineTo(startX + radicalWidth, topY);
+    
+    // Draw the horizontal bar over the content
+    path.lineTo(startX + radicalWidth + contentWidth, topY);
     
     // Draw the path
     canvas.drawPath(path, paint);
