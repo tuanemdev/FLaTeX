@@ -36,11 +36,7 @@ class SqrtLayoutBox extends LayoutBox {
     final path = Path();
     path.moveTo(startX, baseY - height * 0.4); // Start at middle left
     path.lineTo(startX + symbolWidth * 0.3, baseY); // Down to bottom
-    path.lineTo(startX + symbolWidth * 0.6, offset.dy + height * 0.3); // Up to top-right of symbol
-    path.lineTo(startX + symbolWidth, offset.dy + height * 0.5); // Small hook at top
-    
-    // Horizontal line covering the content
-    path.moveTo(startX + symbolWidth * 0.6, offset.dy + lineThickness); // Top-right of symbol
+    path.lineTo(startX + symbolWidth * 0.6, offset.dy + lineThickness); // Up to top-right of symbol
     path.lineTo(offset.dx + symbolWidth + contentWidth, offset.dy + lineThickness); // Horizontal line
     
     // Draw the path
