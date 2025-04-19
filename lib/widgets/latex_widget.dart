@@ -1,12 +1,12 @@
 
 import 'package:flatex/parser/parser.dart';
 import 'package:flutter/material.dart';
-import 'package:flatex/renderer/layout.dart';
+import 'package:flatex/renderer/layout/layout.dart';
 import 'package:flatex/renderer/layout_builder.dart';
 import 'package:flatex/model/node.dart';
 import 'package:flatex/util/font_loader.dart';
 
-class LatexWidget extends StatefulWidget {
+class LaTeXWidget extends StatefulWidget {
   final String latexCode;
   final TextStyle textStyle;
   final TextStyle mathStyle;
@@ -14,7 +14,7 @@ class LatexWidget extends StatefulWidget {
   final bool useDefaultFont;
   final String? fontFamily;
 
-  const LatexWidget({
+  const LaTeXWidget({
     super.key,
     required this.latexCode,
     this.textStyle = const TextStyle(fontSize: 16.0, color: Colors.black),
@@ -25,11 +25,11 @@ class LatexWidget extends StatefulWidget {
   });
 
   @override
-  State<LatexWidget> createState() => _LatexWidgetState();
+  State<LaTeXWidget> createState() => _LaTeXWidgetState();
 }
 
-class _LatexWidgetState extends State<LatexWidget> {
-  late LatexNode _rootNode;
+class _LaTeXWidgetState extends State<LaTeXWidget> {
+  late LaTeXNode _rootNode;
   late LayoutBox _layoutBox;
   String? _error;
 
@@ -40,7 +40,7 @@ class _LatexWidgetState extends State<LatexWidget> {
   }
 
   @override
-  void didUpdateWidget(LatexWidget oldWidget) {
+  void didUpdateWidget(LaTeXWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.latexCode != widget.latexCode ||
         oldWidget.textStyle != widget.textStyle ||
@@ -54,7 +54,7 @@ class _LatexWidgetState extends State<LatexWidget> {
 
   void _parseAndLayout() {
     try {
-      final parser = LatexParser(widget.latexCode);
+      final parser = LaTeXParser(widget.latexCode);
       _rootNode = parser.parse();
       
       // Select the font family from the provided options or use default

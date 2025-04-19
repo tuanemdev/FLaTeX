@@ -1,9 +1,20 @@
 import 'dart:math' as math;
 import 'package:flatex/model/node.dart';
-import 'package:flatex/renderer/layout.dart';
+import 'package:flatex/model/nodes/command_node.dart';
+import 'package:flatex/model/nodes/environment_node.dart';
+import 'package:flatex/model/nodes/error_node.dart';
+import 'package:flatex/model/nodes/fraction_node.dart';
+import 'package:flatex/model/nodes/group_node.dart';
+import 'package:flatex/model/nodes/math_node.dart';
+import 'package:flatex/model/nodes/matrix_node.dart';
+import 'package:flatex/model/nodes/subscript_node.dart';
+import 'package:flatex/model/nodes/superscript_node.dart';
+import 'package:flatex/model/nodes/symbol_node.dart';
+import 'package:flatex/model/nodes/text_node.dart';
+import 'package:flatex/renderer/layout/layout.dart';
 import 'package:flutter/material.dart';
 
-class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
+class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
   final TextStyle baseTextStyle;
   final TextStyle mathStyle;
   final double fontSize;
@@ -385,7 +396,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     );
   }
 
-  LayoutBox _buildFraction(LatexNode numerator, LatexNode denominator) {
+  LayoutBox _buildFraction(LaTeXNode numerator, LaTeXNode denominator) {
     final numeratorBox = numerator.accept(this);
     final denominatorBox = denominator.accept(this);
 
@@ -414,30 +425,28 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     );
   }
 
-  LayoutBox _buildSquareRoot(LatexNode content) {
+  LayoutBox _buildSquareRoot(LaTeXNode content) {
     final contentBox = content.accept(this);
     
-    // Improved sqrt proportions with better content positioning
-    final padding = fontSize * 0.6; 
-    final symbolSize = math.max(contentBox.height * 1.6, fontSize * 1.3);
-    final symbolWidth = symbolSize * 0.7;
+    // Use more conservative padding and proportions
+    final padding = fontSize * 0.4; 
+    final symbolWidth = contentBox.height * 0.6;
     
-    // Position content better inside the square root - more centered
-    contentBox.translate(Offset(symbolWidth + padding * 0.5, padding * 0.7));
+    // Position content with a more reasonable offset
+    contentBox.translate(Offset(symbolWidth + padding * 0.8, padding * 0.5));
     
-    // Increased spacing for better appearance
-    final totalWidth = contentBox.width + symbolWidth * 1.5 + padding * 2;
-    final totalHeight = contentBox.height + padding * 2;
+    // Adjusted spacing for better appearance
+    final totalWidth = contentBox.width + symbolWidth + padding * 2;
+    final totalHeight = contentBox.height + padding;
     
     return SqrtLayoutBox(
       bounds: Rect.fromLTWH(0, 0, totalWidth, totalHeight),
       children: [contentBox],
-      lineThickness: fractionLineThickness * 1.6,
+      lineThickness: fractionLineThickness,
       lineColor: mathStyle.color ?? Colors.black,
       symbolStyle: mathStyle.copyWith(
-        fontSize: symbolSize,
+        fontSize: contentBox.height * 1.2,
         height: 1.0,
-        fontWeight: FontWeight.bold,
       ),
     );
   }
@@ -530,7 +539,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     );
   }
 
-  LayoutBox _buildText(LatexNode content) {
+  LayoutBox _buildText(LaTeXNode content) {
     final LatexLayoutBuilder textStyleBuilder = LatexLayoutBuilder(
       baseTextStyle: baseTextStyle,
       mathStyle:
@@ -568,8 +577,8 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
       return LayoutBox(bounds: Rect.fromLTWH(0, 0, 10, 10));
     }
 
-    List<List<LatexNode>> cells = [];
-    List<LatexNode> currentRow = [];
+    List<List<LaTeXNode>> cells = [];
+    List<LaTeXNode> currentRow = [];
 
     for (final child in node.content) {
       if (child is MatrixNode) {
@@ -594,7 +603,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
 
   LayoutBox _buildMatrixFromCells(
     String matrixType,
-    List<List<LatexNode>> cells,
+    List<List<LaTeXNode>> cells,
   ) {
     if (cells.isEmpty) {
       return LayoutBox(bounds: Rect.fromLTWH(0, 0, 10, 10));
@@ -788,7 +797,7 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
   }
 
   // Helper: check if a node is a large operator (lim, sum, int, prod, etc.)
-  bool _isLargeOperator(LatexNode node) {
+  bool _isLargeOperator(LaTeXNode node) {
     if (node is CommandNode) {
       final name = node.name.replaceFirst(r'\', '');
       return [

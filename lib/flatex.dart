@@ -2,9 +2,6 @@ library;
 
 import 'package:flatex/util/font_loader.dart';
 
-// Export the configuration
-export 'src/config/font_config.dart';
-
 // Export all public components
 export 'package:flatex/widgets/latex_widget.dart';
 export 'package:flatex/model/node.dart';

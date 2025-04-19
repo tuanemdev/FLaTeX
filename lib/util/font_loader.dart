@@ -67,7 +67,6 @@ class MathFontLoader {
     if (_loadedFonts[fontFamily] == true) return true;
     
     if (!_fontPaths.containsKey(fontFamily)) {
-      print('Warning: Unknown font family: $fontFamily');
       return false;
     }
     
@@ -76,7 +75,6 @@ class MathFontLoader {
       _loadedFonts[fontFamily] = true;
       return true;
     } catch (e) {
-      print('Warning: Could not load font $fontFamily: $e');
       return false;
     }
   }

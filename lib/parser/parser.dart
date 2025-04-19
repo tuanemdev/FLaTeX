@@ -1,13 +1,23 @@
 import 'package:flatex/model/node.dart';
+import 'package:flatex/model/nodes/command_node.dart';
+import 'package:flatex/model/nodes/environment_node.dart';
+import 'package:flatex/model/nodes/error_node.dart';
+import 'package:flatex/model/nodes/fraction_node.dart';
+import 'package:flatex/model/nodes/group_node.dart';
+import 'package:flatex/model/nodes/math_node.dart';
+import 'package:flatex/model/nodes/matrix_node.dart';
+import 'package:flatex/model/nodes/subscript_node.dart';
+import 'package:flatex/model/nodes/superscript_node.dart';
+import 'package:flatex/model/nodes/text_node.dart';
 import 'package:flatex/parser/lexer.dart';
 import 'package:flatex/parser/token.dart';
 
-class LatexParser {
-  final LatexLexer lexer;
+final class LaTeXParser {
+  final LaTeXLexer lexer;
   Token currentToken;
 
-  LatexParser(String input)
-    : lexer = LatexLexer(input),
+  LaTeXParser(String input)
+    : lexer = LaTeXLexer(input),
       currentToken = Token(type: TokenType.eof, value: '', position: 0) {
     // Initialize with the first token
     advance();
@@ -34,13 +44,13 @@ class LatexParser {
     advance();
   }
 
-  LatexNode parse() {
+  LaTeXNode parse() {
     return parseDocument();
   }
 
-  LatexNode parseDocument() {
+  LaTeXNode parseDocument() {
     final startPos = currentToken.position;
-    final nodes = <LatexNode>[];
+    final nodes = <LaTeXNode>[];
 
     while (currentToken.type != TokenType.eof) {
       nodes.add(parseExpression());
@@ -53,10 +63,10 @@ class LatexParser {
     );
   }
 
-  LatexNode parseExpression() {
-    LatexNode node;
+  LaTeXNode parseExpression() {
+    LaTeXNode node;
     final initialPosition = currentToken.position;
-    
+
     switch (currentToken.type) {
       case TokenType.text:
         node = parseText();
@@ -97,7 +107,9 @@ class LatexParser {
         return ErrorNode(
           message: 'Unexpected token: ${errorToken.type} (${errorToken.value})',
           startPosition: errorPos,
-          endPosition: errorPos + (errorToken.value.isNotEmpty ? errorToken.value.length : 1),
+          endPosition:
+              errorPos +
+              (errorToken.value.isNotEmpty ? errorToken.value.length : 1),
         );
     }
 
@@ -144,7 +156,7 @@ class LatexParser {
     );
   }
 
-  LatexNode parseCommand() {
+  LaTeXNode parseCommand() {
     final startPos = currentToken.position;
     final commandName = currentToken.value;
     advance();
@@ -164,7 +176,7 @@ class LatexParser {
       expect(TokenType.endOptions, 'Expected closing bracket for options');
     }
 
-    final arguments = <LatexNode>[];
+    final arguments = <LaTeXNode>[];
     while (currentToken.type == TokenType.beginGroup) {
       arguments.add(parseGroup());
     }
@@ -194,10 +206,14 @@ class LatexParser {
     final startPos = currentToken.position;
     expect(TokenType.beginGroup, 'Expected opening brace');
 
-    final children = <LatexNode>[];
+    final children = <LaTeXNode>[];
     if (currentToken.type == TokenType.endGroup) {
       expect(TokenType.endGroup, 'Expected closing brace');
-      return GroupNode(children: children, startPosition: startPos, endPosition: lexer.position);
+      return GroupNode(
+        children: children,
+        startPosition: startPos,
+        endPosition: lexer.position,
+      );
     }
     while (currentToken.type != TokenType.endGroup &&
         currentToken.type != TokenType.eof) {
@@ -213,7 +229,7 @@ class LatexParser {
     );
   }
 
-  LatexNode parseMath(bool isDisplayMode) {
+  LaTeXNode parseMath(bool isDisplayMode) {
     final startPos = currentToken.position;
 
     final beginType =
@@ -227,7 +243,7 @@ class LatexParser {
 
     expect(beginType, 'Expected math delimiter');
 
-    final children = <LatexNode>[];
+    final children = <LaTeXNode>[];
     while (currentToken.type != endType && currentToken.type != TokenType.eof) {
       children.add(parseExpression());
     }
@@ -256,7 +272,7 @@ class LatexParser {
     );
   }
 
-  LatexNode parseEnvironment() {
+  LaTeXNode parseEnvironment() {
     final startPos = currentToken.position;
     expect(TokenType.beginEnvironment, 'Expected \\begin');
 
@@ -283,7 +299,7 @@ class LatexParser {
       expect(TokenType.endOptions, 'Expected closing bracket for options');
     }
 
-    final content = <LatexNode>[];
+    final content = <LaTeXNode>[];
 
     // Special handling for matrix-like environments
     if (environmentName.contains('matrix')) {
@@ -343,15 +359,15 @@ class LatexParser {
 
   MatrixNode parseMatrixContent(String matrixType) {
     final startPos = currentToken.position;
-    final cells = <List<LatexNode>>[];
-    var currentRow = <LatexNode>[];
+    final cells = <List<LaTeXNode>>[];
+    var currentRow = <LaTeXNode>[];
 
     while (!(currentToken.type == TokenType.endEnvironment) &&
         currentToken.type != TokenType.eof) {
       if (currentToken.value == '\\\\') {
         // End of row
         cells.add(currentRow);
-        currentRow = <LatexNode>[];
+        currentRow = <LaTeXNode>[];
         advance();
         continue;
       } else if (currentToken.type == TokenType.separator) {
