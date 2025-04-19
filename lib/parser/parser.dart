@@ -64,6 +64,11 @@ final class LaTeXParser {
   }
 
   LaTeXNode parseExpression() {
+    // Skip any whitespace before starting a new expression
+    while (currentToken.type == TokenType.whitespace) {
+      advance();
+    }
+
     LaTeXNode node;
     final initialPosition = currentToken.position;
 
@@ -118,6 +123,10 @@ final class LaTeXParser {
         currentToken.type == TokenType.subscript) {
       if (currentToken.type == TokenType.superscript) {
         advance();
+        // Skip any whitespace after the superscript symbol
+        while (currentToken.type == TokenType.whitespace) {
+          advance();
+        }
         final exponent =
             currentToken.type == TokenType.beginGroup
                 ? parseGroup()
@@ -130,6 +139,10 @@ final class LaTeXParser {
         );
       } else if (currentToken.type == TokenType.subscript) {
         advance();
+        // Skip any whitespace after the subscript symbol
+        while (currentToken.type == TokenType.whitespace) {
+          advance();
+        }
         final subscript =
             currentToken.type == TokenType.beginGroup
                 ? parseGroup()
@@ -141,6 +154,11 @@ final class LaTeXParser {
           endPosition: subscript.endPosition,
         );
       }
+    }
+
+    // Skip any whitespace after the expression
+    while (currentToken.type == TokenType.whitespace) {
+      advance();
     }
 
     return node;
@@ -160,6 +178,11 @@ final class LaTeXParser {
     final startPos = currentToken.position;
     final commandName = currentToken.value;
     advance();
+
+    // Skip whitespace after the command name
+    while (currentToken.type == TokenType.whitespace) {
+      advance();
+    }
 
     final options = <String>[];
     if (currentToken.type == TokenType.beginOptions) {

@@ -455,25 +455,24 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
     // Get the sum symbol
     final sumSymbol = symbolMap['sum'] ?? '∑';
     
-    // Create a text painter for the symbol to measure it - larger like Swift's approach
-    final symbolSize = fontSize * 2.0;  // Make the sum symbol larger
+    // Create a text painter for the symbol to measure it
+    final symbolSize = fontSize * 2.0;
     final sumPainter = TextPainter(
       text: TextSpan(text: sumSymbol, style: mathStyle.copyWith(
         fontSize: symbolSize,
-        fontWeight: FontWeight.w500, // Semi-bold for better visual impact
+        fontWeight: FontWeight.w500,
       )),
       textDirection: TextDirection.ltr,
     )..layout();
     
-    // Initial dimensions with more padding like Swift
-    double width = sumPainter.width * 1.6;  // More width for the sum symbol
+    double width = sumPainter.width * 1.6;
     
     // Handle subscript and superscript if present
     LayoutBox? subBox, supBox;
     double subSupWidth = 0;
     bool hasLimits = false;
+    bool isLimitStyle = true; // Default to limit style for display mode
     
-    // Create a smaller builder for scripts - Swift uses a more dramatic scaling
     final scriptBuilder = LatexLayoutBuilder(
       baseTextStyle: baseTextStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
       mathStyle: mathStyle.copyWith(fontSize: fontSize * scriptScaleFactor),
@@ -487,44 +486,47 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       matrixCellPadding: matrixCellPadding,
     );
     
-    // Find and process limits (subscripts/superscripts) from arguments
-    // Check arguments safely - don't force unwrap
+    // Only process direct subscripts and superscripts as limits
     if (node.arguments.isNotEmpty) {
       for (var arg in node.arguments) {
-        if (arg is SubscriptNode) {
+        // Check if this is a direct subscript/superscript for the sum operator
+        if (arg is SubscriptNode && 
+            (arg.base is TextNode && (arg.base as TextNode).text.isEmpty)) {
           subBox = arg.subscript.accept(scriptBuilder);
-          subSupWidth = math.max(subSupWidth, subBox?.width ?? 0);
+          if (subBox != null) {
+            subSupWidth = math.max(subSupWidth, subBox.width);
+          }
           hasLimits = true;
-        } else if (arg is SuperscriptNode) {
+        } else if (arg is SuperscriptNode && 
+                  (arg.base is TextNode && (arg.base as TextNode).text.isEmpty)) {
           supBox = arg.exponent.accept(scriptBuilder);
-          subSupWidth = math.max(subSupWidth, supBox?.width ?? 0);
+          if (supBox != null) {
+            subSupWidth = math.max(subSupWidth, supBox.width);
+          }
           hasLimits = true;
         }
       }
     }
     
-    // Position subscript and superscript with more space like Swift
-    width = math.max(width, subSupWidth * 1.4);  // More width for better appearance
+    width = math.max(width, subSupWidth * 1.4);
     final children = <LayoutBox>[];
     double totalHeight = sumPainter.height;
-    double verticalGap = 5.0; // Increased gap for more spacing
+    double verticalGap = 5.0;
     
-    // Handle superscript first (top position) with more vertical space like Swift
+    // Position superscript and subscript properly
     if (supBox != null) {
       supBox.translate(Offset(
         (width - supBox.width) / 2,
-        0  // Position at the top
+        0
       ));
       children.add(supBox);
       totalHeight += supBox.height + verticalGap * 1.2;
     }
     
-    // Handle subscript (bottom position) with more separation
     if (subBox != null) {
-      // Position below the sum symbol
       subBox.translate(Offset(
         (width - subBox.width) / 2,
-        sumPainter.height + verticalGap * 1.2  // More space below like Swift
+        sumPainter.height + verticalGap * 1.2
       ));
       children.add(subBox);
       totalHeight += subBox.height + verticalGap * 1.2;
@@ -536,6 +538,7 @@ class LatexLayoutBuilder implements LaTeXNodeVisitor<LayoutBox> {
       bounds: Rect.fromLTWH(0, 0, width, totalHeight),
       children: children,
       hasLimits: hasLimits,
+      isLimitStyle: isLimitStyle,
     );
   }
 

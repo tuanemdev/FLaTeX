@@ -1,78 +1,52 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:flatex/renderer/layout/layout_box.dart';
 
 class SqrtLayoutBox extends LayoutBox {
   final double lineThickness;
   final Color lineColor;
-  final String sqrtSymbol;
   final TextStyle symbolStyle;
-  final TextPainter symbolPainter;
 
   SqrtLayoutBox({
     required super.bounds,
-    List<LayoutBox> super.children = const [],
+    required super.children,
     super.offset,
-    this.lineThickness = 1.5,
-    this.lineColor = Colors.black,
-    this.sqrtSymbol = '√',
-    TextStyle? symbolStyle,
-  }) : symbolStyle = (symbolStyle ?? TextStyle(fontSize: 20, color: lineColor)),
-       symbolPainter = TextPainter(
-         text: TextSpan(
-           text: '√',
-           style: (symbolStyle ?? TextStyle(fontSize: 20, color: lineColor)),
-         ),
-         textDirection: TextDirection.ltr,
-       )..layout();
+    required this.lineThickness,
+    required this.lineColor,
+    required this.symbolStyle,
+  });
 
   @override
   void draw(Canvas canvas) {
-    // Get content dimensions
-    final contentHeight = children.isNotEmpty ? children.first.height : bounds.height * 0.6;
-    final contentWidth = children.isNotEmpty ? children.first.width : bounds.width * 0.6;
-
-    // More proportional radical sign - use both height and width for better proportions
-    final symbolHeight = math.min(contentHeight * 1.3, bounds.height * 0.95);
-    // Use contentWidth to help determine a good width for the radical symbol
-    final symbolWidth = math.min(symbolHeight * 0.6, contentWidth * 0.15);
-    
-    // Slight vertical offset to align with content
-    final symbolYOffset = contentHeight * 0.05;
-
-    // Use thicker stroke for better clarity
+    // Draw the radical symbol
     final paint = Paint()
       ..color = lineColor
-      ..style = PaintingStyle.stroke
       ..strokeWidth = lineThickness
-      ..strokeCap = StrokeCap.round;
+      ..style = PaintingStyle.stroke;
 
-    // Create a path for a vertically oriented radical sign
+    // Calculate positions for the square root symbol parts
+    final double height = bounds.height;
+    final double contentWidth = children.isNotEmpty ? children[0].width : 0;
+    final double symbolWidth = height * 0.5; // Width proportional to height
+
+    // Starting point at the bottom-left of the symbol
+    final startX = offset.dx + symbolWidth * 0.1;
+    final baseY = offset.dy + height - lineThickness;
+    
+    // Path for the radical symbol
     final path = Path();
-
-    // Starting point at lower left of radical
-    final startX = offset.dx + 2.0;
-    final startY = offset.dy + contentHeight * 0.7; // Position for the slant part
-
-    // First horizontal segment at bottom
-    path.moveTo(startX, startY);
-    path.lineTo(startX + symbolWidth * 0.4, startY);
+    path.moveTo(startX, baseY - height * 0.4); // Start at middle left
+    path.lineTo(startX + symbolWidth * 0.3, baseY); // Down to bottom
+    path.lineTo(startX + symbolWidth * 0.6, offset.dy + height * 0.3); // Up to top-right of symbol
+    path.lineTo(startX + symbolWidth, offset.dy + height * 0.5); // Small hook at top
     
-    // Vertical line up to the content
-    path.lineTo(startX + symbolWidth * 0.4, offset.dy + contentHeight * 0.9);
+    // Horizontal line covering the content
+    path.moveTo(startX + symbolWidth * 0.6, offset.dy + lineThickness); // Top-right of symbol
+    path.lineTo(offset.dx + symbolWidth + contentWidth, offset.dy + lineThickness); // Horizontal line
     
-    // Diagonal ascender - shorter and not so steep
-    path.lineTo(startX + symbolWidth * 0.7, offset.dy - contentHeight * 0.05);
-
-    // Draw the horizontal line extending from the radical - aligned with top of content
-    final lineY = offset.dy + symbolYOffset;
-    final lineEndX = offset.dx + bounds.width;
-
-    path.lineTo(lineEndX, lineY);
-
+    // Draw the path
     canvas.drawPath(path, paint);
-
-    // Draw the children
+    
+    // Draw children (content under the radical)
     super.draw(canvas);
   }
 }

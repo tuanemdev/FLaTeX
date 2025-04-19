@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flatex/renderer/layout/layout_box.dart';
+import 'package:flatex/util/font_loader.dart';
 
 class SymbolLayoutBox extends LayoutBox {
   final String symbol;
@@ -12,7 +13,12 @@ class SymbolLayoutBox extends LayoutBox {
     required super.bounds,
     super.offset,
   }) : textPainter = TextPainter(
-         text: TextSpan(text: symbol, style: style),
+         text: TextSpan(
+           text: symbol, 
+           style: style.copyWith(
+             fontFamily: style.fontFamily ?? MathFontLoader.defaultMathFont,
+           ),
+         ),
          textDirection: TextDirection.ltr,
        )..layout();
 

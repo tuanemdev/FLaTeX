@@ -31,6 +31,11 @@ final class LaTeXLexer {
 
     final char = peek();
 
+    // Handle whitespace separately to make it a distinct token
+    if (isWhitespace(char)) {
+      return scanWhitespace();
+    }
+
     switch (char) {
       case r'\':
         if (peek(1) == '[') {
@@ -191,13 +196,30 @@ final class LaTeXLexer {
     final startPos = position;
     final buffer = StringBuffer();
 
-    while (!isEOF && !isSpecialChar(peek())) {
+    while (!isEOF && !isSpecialChar(peek()) && !isWhitespace(peek())) {
       buffer.write(peek());
       advance();
     }
 
     return Token(
       type: TokenType.text,
+      value: buffer.toString(),
+      position: startPos,
+    );
+  }
+
+  // New method to handle whitespace tokens
+  Token scanWhitespace() {
+    final startPos = position;
+    final buffer = StringBuffer();
+
+    while (!isEOF && isWhitespace(peek())) {
+      buffer.write(peek());
+      advance();
+    }
+
+    return Token(
+      type: TokenType.whitespace,
       value: buffer.toString(),
       position: startPos,
     );
@@ -213,6 +235,11 @@ final class LaTeXLexer {
   }
 
   bool isSpecialChar(String char) {
-    return r'{},\\$^_[]'.contains(char);
+    return r'{},\\$^_[]'.contains(char) || isWhitespace(char);
+  }
+
+  // New helper method to check for whitespace
+  bool isWhitespace(String char) {
+    return char == ' ' || char == '\t' || char == '\n' || char == '\r';
   }
 }
