@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flatex/parser/parser.dart';
 import 'package:flutter/material.dart';

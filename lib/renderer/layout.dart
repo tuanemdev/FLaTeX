@@ -248,7 +248,6 @@ class SqrtLayoutBox extends LayoutBox {
   void draw(Canvas canvas) {
     // Get content dimensions
     final contentHeight = children.isNotEmpty ? children.first.height : bounds.height * 0.6;
-    final contentWidth = children.isNotEmpty ? children.first.width : bounds.width * 0.6;
     
     // Swift implementation uses taller radical sign
     final symbolHeight = math.max(contentHeight * 1.7, 18.0);

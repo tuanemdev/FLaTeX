@@ -458,7 +458,6 @@ class LatexLayoutBuilder implements LatexNodeVisitor<LayoutBox> {
     
     // Initial dimensions with more padding like Swift
     double width = sumPainter.width * 1.6;  // More width for the sum symbol
-    double height = sumPainter.height;
     
     // Handle subscript and superscript if present
     LayoutBox? subBox, supBox;

@@ -97,7 +97,7 @@ class LatexParser {
         return ErrorNode(
           message: 'Unexpected token: ${errorToken.type} (${errorToken.value})',
           startPosition: errorPos,
-          endPosition: errorPos + (errorToken.value.length > 0 ? errorToken.value.length : 1),
+          endPosition: errorPos + (errorToken.value.isNotEmpty ? errorToken.value.length : 1),
         );
     }
 

@@ -1,4 +1,4 @@
-library flatex;
+library;
 
 import 'package:flatex/util/font_loader.dart';
 
